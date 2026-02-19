@@ -1,6 +1,3 @@
-// id, property_id (FK), name, description, max_adults, max_children,
-//  base_rate, amenities (jsonb), photos (jsonb), is_active
-
 namespace HotelBookingEngine.Models
 {
     public class RoomType
