@@ -13,9 +13,10 @@ builder.Services.AddDbContext<HotelDbContext>(options =>
 
 var app = builder.Build();
 
-// Seed database in development
 if (app.Environment.IsDevelopment())
 {
+    app.MapOpenApi();
+    // Seed database in development environment
     try
     {
         using var scope = app.Services.CreateScope();
@@ -28,8 +29,6 @@ if (app.Environment.IsDevelopment())
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "An error occurred while migrating or seeding the database.");
     }
-
-    app.MapOpenApi();
 }
 
 app.UseHttpsRedirection();
