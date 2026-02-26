@@ -1,4 +1,4 @@
-bin/
-obj/
-appsettings.Development.json
-appsettings.json
+backend/bin/
+backend/obj/
+backend/appsettings.Development.json
+backend/appsettings.json
