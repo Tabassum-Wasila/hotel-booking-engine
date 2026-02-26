@@ -1,2 +1,4 @@
-bin/
-obj/
+backend/bin/
+backend/obj/
+backend/appsettings.Development.json
+backend/appsettings.json
