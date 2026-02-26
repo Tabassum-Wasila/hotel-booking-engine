@@ -1,3 +1,5 @@
+using HotelBookingEngine.Models.Enums;
+
 namespace HotelBookingEngine.Models
 {
     public class Reservation
@@ -19,7 +21,7 @@ namespace HotelBookingEngine.Models
         public decimal NightlyRate { get; set; }
         public decimal TaxAmount { get; set; }
         public decimal TotalAmount { get; set; }
-        public string Status { get; set; } = "PENDING"; // Default to PENDING, can be CONFIRMED, MODIFIED, CANCELLED, NO_SHOW, CHECKED_IN, CHECKED_OUT
+        public ReservationStatus Status { get; set; } = ReservationStatus.PENDING; // Default to PENDING, can be CONFIRMED, MODIFIED, CANCELLED, NO_SHOW, CHECKED_IN, CHECKED_OUT
         public DateTime? CancelledAt { get; set; }
         public string CancellationRef { get; set; } = string.Empty;
 
