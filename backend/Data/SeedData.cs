@@ -99,8 +99,8 @@ public static class SeedData
                 MealPlan = "Room Only",
                 MinLos = 1,
                 MaxLos = 30,
-                ValidFrom = new DateTime(2026, 2, 20),
-                ValidTo = new DateTime(2026, 12, 31)
+                ValidFrom = DateTime.UtcNow.Date,
+                ValidTo = DateTime.UtcNow.Date.AddYears(1)
             });
 
             ratePlans.Add(new RatePlan
@@ -112,8 +112,8 @@ public static class SeedData
                 MealPlan = "Room Only",
                 MinLos = 1,
                 MaxLos = 30,
-                ValidFrom = new DateTime(2026, 2, 20),
-                ValidTo = new DateTime(2026, 12, 31)
+                ValidFrom = DateTime.UtcNow.Date,
+                ValidTo = DateTime.UtcNow.Date.AddYears(1)
             });
 
             ratePlans.Add(new RatePlan
@@ -125,17 +125,17 @@ public static class SeedData
                 MealPlan = "Breakfast",
                 MinLos = 2,
                 MaxLos = 30,
-                ValidFrom = new DateTime(2026, 2, 20),
-                ValidTo = new DateTime(2026, 12, 31)
+                ValidFrom = DateTime.UtcNow.Date,
+                ValidTo = DateTime.UtcNow.Date.AddYears(1)
             });
         }
 
         context.RatePlans.AddRange(ratePlans);
         await context.SaveChangesAsync();
 
-        // Seed Inventory (90 days from Feb 26 - May 26, 2026)
+        // Seed Inventory (90 days from today)
         var inventoryList = new List<Inventory>();
-        var startDate = new DateTime(2026, 2, 26);
+        var startDate = DateTime.UtcNow.Date;
         var roomTypes = new[] { standard, deluxeKing, suite, familyRoom };
         var roomCounts = new[] { 10, 8, 3, 5 }; // Total rooms per type
 
@@ -157,7 +157,7 @@ public static class SeedData
         context.Inventories.AddRange(inventoryList);
         await context.SaveChangesAsync();
 
-        var passwordHash = BCrypt.Net.BCrypt.HashPassword("Password123!", 12);
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword("Password123!", 6);
 
         var adminUser = new User
         {
@@ -180,6 +180,7 @@ public static class SeedData
         context.Users.AddRange(adminUser, agentUser);
         await context.SaveChangesAsync();
 
+        var today = DateTime.UtcNow.Date;
         var reservations = new List<Reservation>
         {
             new Reservation
@@ -188,8 +189,8 @@ public static class SeedData
                 PropertyId = property.Id,
                 RoomTypeId = deluxeKing.Id,
                 RatePlanId = ratePlans.First(r => r.RoomTypeId == deluxeKing.Id && r.Name == "Flexible Rate").Id,
-                CheckIn = new DateTime(2026, 3, 15),
-                CheckOut = new DateTime(2026, 3, 18),
+                CheckIn = today.AddDays(14),
+                CheckOut = today.AddDays(17),
                 Nights = 3,
                 Adults = 2,
                 Children = 0,
@@ -209,8 +210,8 @@ public static class SeedData
                 PropertyId = property.Id,
                 RoomTypeId = suite.Id,
                 RatePlanId = ratePlans.First(r => r.RoomTypeId == suite.Id && r.Name == "Breakfast Included").Id,
-                CheckIn = new DateTime(2026, 3, 20),
-                CheckOut = new DateTime(2026, 3, 25),
+                CheckIn = today.AddDays(20),
+                CheckOut = today.AddDays(25),
                 Nights = 5,
                 Adults = 2,
                 Children = 1,
@@ -230,8 +231,8 @@ public static class SeedData
                 PropertyId = property.Id,
                 RoomTypeId = familyRoom.Id,
                 RatePlanId = ratePlans.First(r => r.RoomTypeId == familyRoom.Id && r.Name == "Flexible Rate").Id,
-                CheckIn = new DateTime(2026, 4, 1),
-                CheckOut = new DateTime(2026, 4, 5),
+                CheckIn = today.AddDays(35),
+                CheckOut = today.AddDays(39),
                 Nights = 4,
                 Adults = 3,
                 Children = 2,
@@ -251,8 +252,8 @@ public static class SeedData
                 PropertyId = property.Id,
                 RoomTypeId = standard.Id,
                 RatePlanId = ratePlans.First(r => r.RoomTypeId == standard.Id && r.Name == "Non-Refundable").Id,
-                CheckIn = new DateTime(2026, 3, 10),
-                CheckOut = new DateTime(2026, 3, 12),
+                CheckIn = today.AddDays(7),
+                CheckOut = today.AddDays(9),
                 Nights = 2,
                 Adults = 1,
                 Children = 0,
@@ -274,8 +275,8 @@ public static class SeedData
                 PropertyId = property.Id,
                 RoomTypeId = deluxeKing.Id,
                 RatePlanId = ratePlans.First(r => r.RoomTypeId == deluxeKing.Id && r.Name == "Breakfast Included").Id,
-                CheckIn = new DateTime(2026, 2, 25),
-                CheckOut = new DateTime(2026, 2, 28),
+                CheckIn = today,
+                CheckOut = today.AddDays(3),
                 Nights = 3,
                 Adults = 2,
                 Children = 1,
@@ -293,7 +294,11 @@ public static class SeedData
         context.Reservations.AddRange(reservations);
         await context.SaveChangesAsync();
 
-        foreach (var reservation in reservations.Where(r => r.Status == ReservationStatus.CONFIRMED || r.Status == ReservationStatus.CHECKED_IN))
+        foreach (var reservation in reservations.Where(r => 
+                r.Status == ReservationStatus.CONFIRMED 
+                || r.Status == ReservationStatus.MODIFIED
+                || r.Status == ReservationStatus.CHECKED_IN)
+            )
         {
             for (var date = reservation.CheckIn; date < reservation.CheckOut; date = date.AddDays(1))
             {

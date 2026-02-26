@@ -16,9 +16,18 @@ var app = builder.Build();
 // Seed database in development
 if (app.Environment.IsDevelopment())
 {
-    using var scope = app.Services.CreateScope();
-    var context = scope.ServiceProvider.GetRequiredService<HotelDbContext>();
-    await SeedData.Initialize(context);
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<HotelDbContext>();
+        await context.Database.MigrateAsync();
+        await SeedData.Initialize(context);
+    }
+    catch (Exception ex)
+    {
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
+    }
 
     app.MapOpenApi();
 }
