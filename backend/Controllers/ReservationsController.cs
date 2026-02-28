@@ -182,8 +182,7 @@ public class ReservationsController(HotelDbContext context) : ControllerBase
             NightlyRate = r.NightlyRate,
             TaxAmount = r.TaxAmount,
             TotalAmount = r.TotalAmount,
-            SpecialRequests = r.SpecialRequests,
-            CreatedAt = DateTime.UtcNow
+            SpecialRequests = r.SpecialRequests
         };
     }
 }
