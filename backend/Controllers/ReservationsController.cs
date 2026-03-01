@@ -4,6 +4,7 @@ using HotelBookingEngine.Data;
 using HotelBookingEngine.DTOs.Reservations;
 using HotelBookingEngine.Models;
 using HotelBookingEngine.Models.Enums;
+using HotelBookingEngine.Constants;
 
 namespace HotelBookingEngine.Controllers;
 
@@ -25,95 +26,93 @@ public class ReservationsController(HotelDbContext context) : ControllerBase
                 return Ok(MapToResponse(existing));
         }
 
-        // Validate dates
+        // Normalize dates to midnight
+        request.CheckIn = request.CheckIn.Date;
+        request.CheckOut = request.CheckOut.Date;
+
         if (request.CheckIn < DateTime.Today)
-            return BadRequest(new { message = "Check-in date must be today or in the future" });
+            return BadRequest(new { message = ErrorMessages.CheckInMustBeTodayOrFuture });
 
         if (request.CheckOut <= request.CheckIn)
-            return BadRequest(new { message = "Check-out date must be after check-in date" });
+            return BadRequest(new { message = ErrorMessages.CheckOutMustBeAfterCheckIn });
 
         var nights = (request.CheckOut - request.CheckIn).Days;
 
-        // Get room type
         var roomType = await context.RoomTypes
             .FirstOrDefaultAsync(rt => rt.Id == request.RoomTypeId && rt.IsActive);
 
         if (roomType == null)
-            return BadRequest(new { message = "Invalid room type" });
+            return BadRequest(new { message = ErrorMessages.InvalidRoomType });
 
-        // Validate capacity
         if (request.Adults > roomType.MaxAdults)
-            return BadRequest(new { message = $"Room type supports maximum {roomType.MaxAdults} adults" });
+            return BadRequest(new { message = ErrorMessages.RoomTypeMaxAdults(roomType.MaxAdults) });
 
         if (request.Adults + request.Children > roomType.MaxAdults + roomType.MaxChildren)
-            return BadRequest(new { message = "Room cannot accommodate this many guests" });
+            return BadRequest(new { message = ErrorMessages.RoomCannotAccommodateGuests });
 
-        // Get rate plan
         var ratePlan = await context.RatePlans
             .FirstOrDefaultAsync(rp => rp.Id == request.RatePlanId && rp.RoomTypeId == request.RoomTypeId);
 
         if (ratePlan == null)
-            return BadRequest(new { message = "Invalid rate plan for this room type" });
+            return BadRequest(new { message = ErrorMessages.InvalidRatePlan });
 
-        // Validate rate plan dates and LOS
-        if (ratePlan.ValidFrom > request.CheckIn || ratePlan.ValidTo < request.CheckOut)
-            return BadRequest(new { message = "Rate plan not valid for selected dates" });
+        // Validate rate plan dates and LOS (ValidTo should cover last night, not checkout day)
+        var lastNight = request.CheckOut.AddDays(-1);
+        if (ratePlan.ValidFrom > request.CheckIn || ratePlan.ValidTo < lastNight)
+            return BadRequest(new { message = ErrorMessages.RatePlanNotValidForDates });
 
         if (nights < ratePlan.MinLos || nights > ratePlan.MaxLos)
-            return BadRequest(new { message = $"Stay must be between {ratePlan.MinLos} and {ratePlan.MaxLos} nights for this rate plan" });
+            return BadRequest(new { message = ErrorMessages.StayMustBeBetweenNights(ratePlan.MinLos, ratePlan.MaxLos) });
 
-        // Get property
         var property = await context.Properties.FirstOrDefaultAsync();
         if (property == null)
-            return BadRequest(new { message = "No property configured" });
+            return BadRequest(new { message = ErrorMessages.NoPropertyConfigured });
 
-        // Get dates for the stay
         var dates = Enumerable.Range(0, nights)
             .Select(i => request.CheckIn.AddDays(i))
             .ToList();
 
-        // Check and update inventory within a transaction
         await using var transaction = await context.Database.BeginTransactionAsync();
 
         try
         {
-            // Lock and check inventory for all dates
+            // Lock inventory rows to prevent race conditions using SELECT FOR UPDATE
+            var placeholders = string.Join(", ", Enumerable.Range(1, nights).Select(i => $"{{{i}}}"));
+            var sql = $"SELECT * FROM Inventories WHERE RoomTypeId = {{0}} AND Date IN ({placeholders}) FOR UPDATE";
+            
+            var parameters = new List<object> { request.RoomTypeId };
+            parameters.AddRange(dates.Cast<object>());
+            
             var inventory = await context.Inventories
-                .Where(i => i.RoomTypeId == request.RoomTypeId)
-                .Where(i => dates.Contains(i.Date))
+                .FromSqlRaw(sql, parameters.ToArray())
                 .ToListAsync();
 
             if (inventory.Count != nights)
             {
                 await transaction.RollbackAsync();
-                return BadRequest(new { message = "No inventory available for some dates" });
+                return BadRequest(new { message = ErrorMessages.NoInventoryForSomeDates });
             }
 
-            // Check availability
             foreach (var inv in inventory)
             {
                 if (inv.TotalRooms - inv.BookedRooms < 1)
                 {
                     await transaction.RollbackAsync();
-                    return BadRequest(new { message = $"No rooms available for {inv.Date:yyyy-MM-dd}" });
+                    return BadRequest(new { message = ErrorMessages.NoRoomsAvailableOnDate(inv.Date) });
                 }
             }
 
-            // Increment booked rooms
             foreach (var inv in inventory)
             {
                 inv.BookedRooms++;
             }
 
-            // Calculate pricing
             var totalRate = ratePlan.RatePerNight * nights;
             var taxAmount = Math.Round(totalRate * TaxRate, 2);
             var totalAmount = Math.Round(totalRate + taxAmount, 2);
 
-            // Generate reference
             var reference = GenerateReference();
 
-            // Create reservation
             var reservation = new Reservation
             {
                 Reference = reference,

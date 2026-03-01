@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using HotelBookingEngine.Data;
 using HotelBookingEngine.DTOs.RoomTypes;
+using HotelBookingEngine.Constants;
 using System.Text.Json;
 
 namespace HotelBookingEngine.Controllers;
@@ -32,7 +33,6 @@ public class RoomTypesController(HotelDbContext context) : ControllerBase
             BaseRate = rt.BaseRate,
             Amenities = ParseJson(rt.Amenities),
             Photos = ParseJson(rt.Photos),
-            IsActive = rt.IsActive,
             RatePlans = ratePlans
                 .Where(rp => rp.RoomTypeId == rt.Id)
                 .Select(rp => new RatePlanSummary
@@ -53,10 +53,11 @@ public class RoomTypesController(HotelDbContext context) : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var rt = await context.RoomTypes.FirstOrDefaultAsync(r => r.Id == id);
+        var rt = await context.RoomTypes
+            .FirstOrDefaultAsync(r => r.Id == id && r.IsActive);
 
         if (rt == null)
-            return NotFound(new { message = "Room type not found" });
+            return NotFound(new { message = ErrorMessages.RoomTypeNotFound });
 
         var ratePlans = await context.RatePlans.Where(rp => rp.RoomTypeId == id).ToListAsync();
 
@@ -70,7 +71,6 @@ public class RoomTypesController(HotelDbContext context) : ControllerBase
             BaseRate = rt.BaseRate,
             Amenities = ParseJson(rt.Amenities),
             Photos = ParseJson(rt.Photos),
-            IsActive = rt.IsActive,
             RatePlans = ratePlans.Select(rp => new RatePlanSummary
             {
                 Id = rp.Id,

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using HotelBookingEngine.Data;
 using HotelBookingEngine.DTOs.Availability;
+using HotelBookingEngine.Constants;
 using System.Text.Json;
 
 namespace HotelBookingEngine.Controllers;
@@ -15,16 +16,20 @@ public class AvailabilityController(HotelDbContext context) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Search([FromQuery] AvailabilityRequest request)
     {
+        // Normalize dates to midnight
+        request.CheckIn = request.CheckIn.Date;
+        request.CheckOut = request.CheckOut.Date;
+
         // Validate dates
         if (request.CheckIn < DateTime.Today)
-            return BadRequest(new { message = "Check-in date must be today or in the future" });
+            return BadRequest(new { message = ErrorMessages.CheckInMustBeTodayOrFuture });
 
         if (request.CheckOut <= request.CheckIn)
-            return BadRequest(new { message = "Check-out date must be after check-in date" });
+            return BadRequest(new { message = ErrorMessages.CheckOutMustBeAfterCheckIn });
 
         var nights = (request.CheckOut - request.CheckIn).Days;
         if (nights > 30)
-            return BadRequest(new { message = "Maximum stay is 30 nights" });
+            return BadRequest(new { message = ErrorMessages.MaximumStay30Nights });
 
         var totalGuests = request.Adults + request.Children;
 
@@ -64,9 +69,10 @@ public class AvailabilityController(HotelDbContext context) : ControllerBase
             .ToListAsync();
 
         // Get rate plans for these room types (valid for the date range)
+        var lastNight = request.CheckOut.AddDays(-1);
         var ratePlans = await context.RatePlans
             .Where(rp => roomTypeIds.Contains(rp.RoomTypeId))
-            .Where(rp => rp.ValidFrom <= request.CheckIn && rp.ValidTo >= request.CheckOut)
+            .Where(rp => rp.ValidFrom <= request.CheckIn && rp.ValidTo >= lastNight)
             .Where(rp => rp.MinLos <= nights && rp.MaxLos >= nights)
             .ToListAsync();
 

@@ -39,11 +39,4 @@ if (app.Environment.IsDevelopment())
 app.UseAuthorization();
 app.MapControllers();
 
-// Minimal API endpoint
-app.MapGet("/api/hello", () => Results.Ok(new { Message = "Hello, world!" }));
-
-app.MapGet("/api/rooms", async (HotelDbContext context) => await context.RoomTypes.ToListAsync());
-
-
-
 app.Run();

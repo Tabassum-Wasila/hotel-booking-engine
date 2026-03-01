@@ -1,7 +1,6 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using HotelBookingEngine.Data;
+
 using HotelBookingEngine.DTOs.Property;
+using HotelBookingEngine.Constants;
 
 namespace HotelBookingEngine.Controllers;
 
@@ -13,9 +12,9 @@ public class PropertyController(HotelDbContext context) : ControllerBase
     public async Task<IActionResult> Get()
     {
         var property = await context.Properties.FirstOrDefaultAsync();
-
+        
         if (property == null)
-            return NotFound(new { message = "No property configured" });
+            return NotFound(new { message = ErrorMessages.NoPropertyConfigured });
 
         return Ok(new PropertyResponse
         {
@@ -23,8 +22,8 @@ public class PropertyController(HotelDbContext context) : ControllerBase
             Name = property.Name,
             Address = property.Address,
             Timezone = property.Timezone,
-            CheckInTime = property.CheckInTime.ToString(@"hh\:mm"),
-            CheckOutTime = property.CheckOutTime.ToString(@"hh\:mm")
+            CheckInTime = property.CheckInTime.ToString(DateFormats.Time),
+            CheckOutTime = property.CheckOutTime.ToString(DateFormats.Time)
         });
     }
 }
