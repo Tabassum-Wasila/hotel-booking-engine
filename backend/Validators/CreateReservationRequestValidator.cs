@@ -1,4 +1,5 @@
 using FluentValidation;
+using HotelBookingEngine.Constants;
 using HotelBookingEngine.DTOs.Reservations;
 
 namespace HotelBookingEngine.Validators
@@ -8,51 +9,51 @@ namespace HotelBookingEngine.Validators
         public CreateReservationRequestValidator()
         {
             RuleFor(x => x.RoomTypeId)
-                .GreaterThan(0).WithMessage("Valid room type is required");
+                .GreaterThan(0).WithMessage(ErrorMessages.InvalidRoomType);
 
             RuleFor(x => x.RatePlanId)
-                .GreaterThan(0).WithMessage("Valid rate plan is required");
+                .GreaterThan(0).WithMessage(ErrorMessages.InvalidRatePlan);
 
             RuleFor(x => x.CheckIn)
-                .NotEmpty().WithMessage("Check-in date is required")
-                .GreaterThanOrEqualTo(DateTime.Today).WithMessage("Check-in date must be today or in the future");
+                .NotEmpty().WithMessage(ErrorMessages.CheckInRequired)
+                .GreaterThanOrEqualTo(DateTime.Today).WithMessage(ErrorMessages.CheckInMustBeTodayOrFuture);
 
             RuleFor(x => x.CheckOut)
-                .NotEmpty().WithMessage("Check-out date is required")
-                .GreaterThan(x => x.CheckIn).WithMessage("Check-out date must be after check-in date");
+                .NotEmpty().WithMessage(ErrorMessages.CheckOutRequired)
+                .GreaterThan(x => x.CheckIn).WithMessage(ErrorMessages.CheckOutMustBeAfterCheckIn);
 
             RuleFor(x => x.Adults)
-                .GreaterThanOrEqualTo(1).WithMessage("At least 1 adult is required")
-                .LessThanOrEqualTo(10).WithMessage("Maximum 10 adults allowed");
+                .GreaterThanOrEqualTo(1).WithMessage(ErrorMessages.AdultRequired)
+                .LessThanOrEqualTo(10).WithMessage(ErrorMessages.MaximumAdultsAllowed);
 
             RuleFor(x => x.Children)
-                .GreaterThanOrEqualTo(0).WithMessage("Children cannot be negative")
-                .LessThanOrEqualTo(6).WithMessage("Maximum 6 children allowed");
+                .GreaterThanOrEqualTo(0).WithMessage(ErrorMessages.ChildrenCannotBeNegative)
+                .LessThanOrEqualTo(6).WithMessage(ErrorMessages.MaximumChildrenAllowed);
 
             RuleFor(x => x.GuestName)
-                .NotEmpty().WithMessage("Guest name is required")
-                .MinimumLength(2).WithMessage("Guest name must be at least 2 characters")
-                .MaximumLength(100).WithMessage("Guest name cannot exceed 100 characters");
+                .NotEmpty().WithMessage(ErrorMessages.GuestNameRequired)
+                .MinimumLength(2).WithMessage(ErrorMessages.GuestNameTooShort)
+                .MaximumLength(100).WithMessage(ErrorMessages.GuestNameTooLong);
 
             RuleFor(x => x.GuestEmail)
                 .EmailAddress().When(x => !string.IsNullOrEmpty(x.GuestEmail))
-                .WithMessage("Valid email address is required");
+                .WithMessage(ErrorMessages.InvalidEmailFormat);
 
             RuleFor(x => x.GuestPhone)
-                .MaximumLength(20).WithMessage("Phone number cannot exceed 20 characters")
+                .MaximumLength(20)
                 .Matches(@"^[\d\s\+\-\(\)]*$").When(x => !string.IsNullOrEmpty(x.GuestPhone))
-                .WithMessage("Invalid phone number format");
+                .WithMessage(ErrorMessages.InvalidPhoneFormat);
 
             RuleFor(x => x)
                 .Must(x => !string.IsNullOrEmpty(x.GuestEmail) || !string.IsNullOrEmpty(x.GuestPhone))
-                .WithMessage("Either email or phone is required");
+                .WithMessage(ErrorMessages.ContactInfoRequired);
 
             RuleFor(x => x.SpecialRequests)
-                .MaximumLength(500).WithMessage("Special requests cannot exceed 500 characters");
+                .MaximumLength(500).WithMessage(ErrorMessages.SpecialRequestsTooLong);
 
             RuleFor(x => x)
                 .Must(x => (x.CheckOut - x.CheckIn).Days <= 30)
-                .WithMessage("Maximum stay is 30 nights");
+                .WithMessage(ErrorMessages.MaximumStay30Nights);
         }
     }
 }
