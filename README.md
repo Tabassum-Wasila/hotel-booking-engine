@@ -74,17 +74,52 @@ frontend/             # Frontend app (coming soon)
 
 ---
 
+## API Endpoints
+
+### Public Guest API
+
+#### Property Info
+```http
+GET /api/property
+```
+Get hotel details including name, address, check-in/check-out times.
+
+#### Search Availability
+```http
+GET /api/availability?checkIn=2026-03-15&checkOut=2026-03-17&adults=2&children=0
+```
+Search available rooms for given dates and guest count. Returns room types with rate plans and pricing.
+
+#### List Room Types
+```http
+GET /api/room-types
+```
+List all active room types with amenities, photos, and rate plans.
+
+#### Room Type Details
+```http
+GET /api/room-types/{id}
+```
+Get detailed information about a specific room type including photos, amenities, and available rate plans.
+
+#### Create Reservation
+```http
+POST /api/reservations
+```
+Submit a booking request. Requires room type, rate plan, dates, and guest details. Returns confirmation with reference code. Management handles modifications and cancellations.
+
+---
+
 ## Coming Soon
 
 ### Backend
-- REST API endpoints (availability search, booking, auth)
 - JWT authentication for staff
 - Admin panel API (inventory, rate plans, reports)
 
 ### Frontend
 - **Search & Availability** — date picker, guest count, room results
 - **Booking Flow** — room selection → guest details → confirmation page
-- **Manage Booking** — lookup by reference + email, modify or cancel
+- **Manage Booking** — contact hotel or call center for modifications/cancellations
 - **Admin Panel**
   - Inventory calendar
   - Rate plan management
